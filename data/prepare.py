@@ -93,7 +93,7 @@ for row in data_qa:
     print(len(res))
 
 f = open('data.json', 'w')
-f.write(str(res))
+f.write(json.dumps(res))
 f.close()
 
 def get_statistics(all_answers):
@@ -107,3 +107,4 @@ def get_statistics(all_answers):
     return word_cnt, contain01_cnt
 
 word_cnt, contain01_cnt = get_statistics(all_answers)
+print(word_cnt, contain01_cnt)
