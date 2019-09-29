@@ -1,4 +1,5 @@
 import os
+import csv
 import json
 import numpy as np
 
@@ -36,34 +37,28 @@ def get_invertdict2():
 VideoAnnotationInvertDict_training, VideoAnnotationInvertDict_validation = get_invertdict1()
 VidorFeatureInvertDict = get_invertdict2()
 
-f = open(os.path.join(CSVPath, 'result.csv'), 'r')
-data_qa = f.readlines()
-f.close()
-
+data_qa = csv.reader(open(os.path.join(CSVPath, 'result.csv')))
 all_answers = []
-
 res = []
-for row in data_qa[1:]:
-    id, video_id, \
-    subject_tid, object_tid, predicate, part, \
-    caption, question_1, answer_1, \
-    question_2, answer_2 = row.split(',')
+for row in data_qa:
+    id, video_id, subject_tid, object_tid, predicate, part, caption, question_1, answer_1, question_2, answer_2 = row
     cur = {}
-    assert (video_id in VideoAnnotationInvertDict_training)
-    assert (video_id in VidorFeatureInvertDict)
-
+    if video_id not in VideoAnnotationInvertDict_training:
+        continue
+    assert (video_id in VideoAnnotationInvertDict_training), 'video_id not in VideoAnnotationInvertDict_training'
+    assert (video_id in VidorFeatureInvertDict), 'video_id not in VidorFeatureInvertDict'
+    # print(VideoAnnotationInvertDict_training[video_id])
     d = json.load(open(VideoAnnotationInvertDict_training[video_id]))
     clips = []
     clip = [np.inf, -1]
     for i in d['relation_instances']:
-        if i['subject_tid']==subject_tid and i['object_tid']==object_tid and i['predicate']==predicate:
+        if i['subject_tid']==int(subject_tid) and i['object_tid']==int(object_tid) and i['predicate']==predicate:
             clips.append([i['begin_fid'],i['end_fid']])
             if i['begin_fid'] < clip[0]:
                 clip[0] = i['begin_fid']
             if i['end_fid'] > clip[1]:
                 clip[1] = i['end_fid']
-    assert (len(clips) > 0)
-
+    assert (len(clips) > 0), 'len(clips) <= 0'
     cur['video_feature_path'] = VidorFeatureInvertDict[video_id]
     cur['clip'] = clip
     cur['clips'] = clips
@@ -73,7 +68,6 @@ for row in data_qa[1:]:
     cur['answer_2'] = answer_2
     all_answers.append(answer_1)
     all_answers.append(answer_2)
-
     sub_traj = []
     sub_traj_fid = []
     ob_traj = []
@@ -92,14 +86,24 @@ for row in data_qa[1:]:
     cur['subject_trajectory_fid'] = sub_traj_fid
     cur['object_trajectory'] = ob_traj
     cur['object_trajectory_fid'] = ob_traj_fid
-
     cur['video_frame_count'] = d['frame_count']
     cur['video_fps'] = d['fps']
     cur['video_time_length'] = cur['video_frame_count']/cur['video_fps']
-
     res.append(cur)
+    print(len(res))
 
 f = open('data.json', 'w')
 f.write(str(res))
 f.close()
 
+def get_statistics(all_answers):
+    word_cnt = {}
+    contain01_cnt = 0
+    for ans in all_answers:
+        word_cnt.setdefault(len(ans.split(' ')), 0)
+        word_cnt[len(ans.split(' '))] += 1
+        if '0' in ans or '1' in ans:
+            contain01_cnt += 1
+    return word_cnt, contain01_cnt
+
+word_cnt, contain01_cnt = get_statistics(all_answers)

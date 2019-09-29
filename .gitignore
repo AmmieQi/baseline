@@ -1,1 +1,4 @@
 venv/*
+.idea
+.gitignore
+data/data.json
