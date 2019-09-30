@@ -52,7 +52,7 @@ class Runner:
             self.model = Model(self.args)
         print(self.model)
         device_ids = [0]
-        self.inference = self.model.inference
+        # self.inference = self.model.inference
         self.model = self.model.to(torch.device('cuda:%d' % device_ids[0]))
         self.model = torch.nn.DataParallel(self.model, device_ids=device_ids)
         # self.model = self.model.cuda()
