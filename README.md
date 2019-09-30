@@ -85,3 +85,42 @@ models_tacos
 64
 ```
 
+Train NewDataset:
+```shell
+python3 main.py \
+--word2vec-path \
+/home1/zhaoyang/dataset/glove_model.bin \
+--dataset \
+NewDataset \
+--feature-path \
+None \
+--train-data \
+data/data.json \
+--val-data \
+data/data.json \
+--test-data \
+data/data.json \
+--max-num-epochs \
+40 \
+--dropout \
+0.2 \
+--warmup-updates \
+300 \
+--warmup-init-lr \
+1e-07 \
+--lr \
+4e-4 \
+--num-heads \
+4 \
+--num-gcn-layers \
+2 \
+--num-attn-layers \
+2 \
+--weight-decay \
+1e-8 \
+--train \
+--model-saved-path \
+models_newdataset \
+--batch-size \
+64
+```

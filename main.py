@@ -63,7 +63,7 @@ def parse_args():
                         help='learning rate')
     parser.add_argument('--video-feature-dim', default=2048, type=int,
                         help='video feature dim')
-    from optim.lr_scheduler.inverse_square_root_schedule import InverseSquareRootSchedule
+    from optimizer.lr_scheduler.inverse_square_root_schedule import InverseSquareRootSchedule
     InverseSquareRootSchedule.add_args(parser)
     from optimizer.adam_optimizer import AdamOptimizer
     AdamOptimizer.add_args(parser)
