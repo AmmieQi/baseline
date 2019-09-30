@@ -20,9 +20,9 @@ class Runner:
     def __init__(self, args):
         self.num_updates = 0
         self.args = args
-        # self.word2vec = load_word2vec(args.word2vec_path)
-        # self._build_loader()
-        # print('build loader done')
+        self.word2vec = load_word2vec(args.word2vec_path)
+        self._build_loader()
+        print('build loader done')
         self._build_model()
         print('build model done')
         self._build_optimizer()
@@ -52,10 +52,10 @@ class Runner:
             self.model = Model(self.args)
         print(self.model)
         device_ids = [0]
-        # self.inference = self.model.inference
-        # self.model = self.model.to(torch.device('cuda:%d' % device_ids[0]))
-        # self.model = torch.nn.DataParallel(self.model, device_ids=device_ids)
-        self.model = self.model.cuda()
+        self.inference = self.model.inference
+        self.model = self.model.to(torch.device('cuda:%d' % device_ids[0]))
+        self.model = torch.nn.DataParallel(self.model, device_ids=device_ids)
+        # self.model = self.model.cuda()
 
     def _build_optimizer(self):
         l = list(self.model.parameters())
