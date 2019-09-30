@@ -71,33 +71,61 @@ class Runner:
         self.model.train()
         loss_meter = AverageMeter()
         time_meter = TimeMeter()
-        for bid, (video, video_mask, words, word_mask,
-                  label, scores, scores_mask, id2pos, node_mask, adj_mat) in enumerate(self.train_loader, 1):
-            self.optimizer.zero_grad()
+        if self.args.dataset == "NewDataset":
+            for bid, (video, video_mask, words, word_mask,
+                      label, scores, scores_mask) in enumerate(self.train_loader, 1):
+                self.optimizer.zero_grad()
 
-            model_input = {
-                'frames': video.cuda(),
-                'frame_mask': video_mask.cuda(), 'words': words.cuda(), 'word_mask': word_mask.cuda(),
-                'label': scores.cuda(), 'label_mask': scores_mask.cuda(), 'gt': label.cuda(),
-                'node_pos': id2pos.cuda(), 'node_mask': node_mask.cuda(), 'adj_mat': adj_mat.cuda()
-            }
+                model_input = {
+                    'frames': video.cuda(),
+                    'frame_mask': video_mask.cuda(), 'words': words.cuda(), 'word_mask': word_mask.cuda(),
+                    'label': scores.cuda(), 'label_mask': scores_mask.cuda(), 'gt': label.cuda()
+                }
 
-            predict_boxes, loss = self.model(**model_input)
-            loss = torch.mean(loss)
-            self.optimizer.backward(loss)
+                predict_boxes, loss = self.model(**model_input)
+                loss = torch.mean(loss)
+                self.optimizer.backward(loss)
 
-            self.optimizer.step()
-            self.num_updates += 1
-            curr_lr = self.lr_scheduler.step_update(self.num_updates)
+                self.optimizer.step()
+                self.num_updates += 1
+                curr_lr = self.lr_scheduler.step_update(self.num_updates)
 
-            loss_meter.update(loss.item())
-            time_meter.update()
+                loss_meter.update(loss.item())
+                time_meter.update()
 
-            if bid % self.args.display_n_batches == 0:
-                logging.info('Epoch %d, Batch %d, loss = %.4f, lr = %.5f, %.3f seconds/batch' % (
-                    epoch, bid, loss_meter.avg, curr_lr, 1.0 / time_meter.avg
-                ))
-                loss_meter.reset()
+                if bid % self.args.display_n_batches == 0:
+                    logging.info('Epoch %d, Batch %d, loss = %.4f, lr = %.5f, %.3f seconds/batch' % (
+                        epoch, bid, loss_meter.avg, curr_lr, 1.0 / time_meter.avg
+                    ))
+                    loss_meter.reset()
+        else:
+            for bid, (video, video_mask, words, word_mask,
+                      label, scores, scores_mask, id2pos, node_mask, adj_mat) in enumerate(self.train_loader, 1):
+                self.optimizer.zero_grad()
+
+                model_input = {
+                    'frames': video.cuda(),
+                    'frame_mask': video_mask.cuda(), 'words': words.cuda(), 'word_mask': word_mask.cuda(),
+                    'label': scores.cuda(), 'label_mask': scores_mask.cuda(), 'gt': label.cuda(),
+                    'node_pos': id2pos.cuda(), 'node_mask': node_mask.cuda(), 'adj_mat': adj_mat.cuda()
+                }
+
+                predict_boxes, loss = self.model(**model_input)
+                loss = torch.mean(loss)
+                self.optimizer.backward(loss)
+
+                self.optimizer.step()
+                self.num_updates += 1
+                curr_lr = self.lr_scheduler.step_update(self.num_updates)
+
+                loss_meter.update(loss.item())
+                time_meter.update()
+
+                if bid % self.args.display_n_batches == 0:
+                    logging.info('Epoch %d, Batch %d, loss = %.4f, lr = %.5f, %.3f seconds/batch' % (
+                        epoch, bid, loss_meter.avg, curr_lr, 1.0 / time_meter.avg
+                    ))
+                    loss_meter.reset()
 
     def eval(self):
         data_loaders = [self.val_loader, self.test_loader]
@@ -106,34 +134,63 @@ class Runner:
         self.model.eval()
         with torch.no_grad():
             for data_loader in data_loaders:
-                for bid, (video, video_mask, words, word_mask,
-                          label, scores, scores_mask, id2pos, node_mask, adj_mat) in enumerate(data_loader, 1):
-                    self.optimizer.zero_grad()
+                if self.args.dataset=='NewDataset':
+                    for bid, (video, video_mask, words, word_mask,
+                              label, scores, scores_mask) in enumerate(data_loader, 1):
+                        self.optimizer.zero_grad()
 
-                    model_input = {
-                        'frames': video.cuda(),
-                        'frame_mask': video_mask.cuda(), 'words': words.cuda(), 'word_mask': word_mask.cuda(),
-                        'label': scores.cuda(), 'label_mask': scores_mask.cuda(), 'gt': label.cuda(),
-                        'node_pos': id2pos.cuda(), 'node_mask': node_mask.cuda(), 'adj_mat': adj_mat.cuda()
-                    }
+                        model_input = {
+                            'frames': video.cuda(),
+                            'frame_mask': video_mask.cuda(), 'words': words.cuda(), 'word_mask': word_mask.cuda(),
+                            'label': scores.cuda(), 'label_mask': scores_mask.cuda(), 'gt': label.cuda()
+                        }
 
-                    predict_boxes, loss = self.model(**model_input)
-                    loss = torch.mean(loss)
+                        predict_boxes, loss = self.model(**model_input)
+                        loss = torch.mean(loss)
 
-                    meters['loss'].update(loss.item())
-                    video_mask = video_mask.cpu().numpy()
-                    gt_boxes = model_input['gt'].cpu().numpy()
-                    predict_boxes = np.round(predict_boxes.cpu().numpy()).astype(np.int32)
-                    gt_starts, gt_ends = gt_boxes[:, 0], gt_boxes[:, 1]
-                    predict_starts, predict_ends = predict_boxes[:, 0], predict_boxes[:, 1]
-                    predict_starts[predict_starts < 0] = 0
-                    seq_len = np.sum(video_mask, -1)
-                    predict_ends[predict_ends >= seq_len] = seq_len[predict_ends >= seq_len] - 1
-                    IoUs = criteria.calculate_IoU_batch((predict_starts, predict_ends),
-                                                        (gt_starts, gt_ends))
-                    meters['mIoU'].update(np.mean(IoUs), IoUs.shape[0])
-                    for i in range(1, 10, 2):
-                        meters['IoU@0.%d' % i].update(np.mean(IoUs >= (i / 10)), IoUs.shape[0])
+                        meters['loss'].update(loss.item())
+                        video_mask = video_mask.cpu().numpy()
+                        gt_boxes = model_input['gt'].cpu().numpy()
+                        predict_boxes = np.round(predict_boxes.cpu().numpy()).astype(np.int32)
+                        gt_starts, gt_ends = gt_boxes[:, 0], gt_boxes[:, 1]
+                        predict_starts, predict_ends = predict_boxes[:, 0], predict_boxes[:, 1]
+                        predict_starts[predict_starts < 0] = 0
+                        seq_len = np.sum(video_mask, -1)
+                        predict_ends[predict_ends >= seq_len] = seq_len[predict_ends >= seq_len] - 1
+                        IoUs = criteria.calculate_IoU_batch((predict_starts, predict_ends),
+                                                            (gt_starts, gt_ends))
+                        meters['mIoU'].update(np.mean(IoUs), IoUs.shape[0])
+                        for i in range(1, 10, 2):
+                            meters['IoU@0.%d' % i].update(np.mean(IoUs >= (i / 10)), IoUs.shape[0])
+                else:
+                    for bid, (video, video_mask, words, word_mask,
+                              label, scores, scores_mask, id2pos, node_mask, adj_mat) in enumerate(data_loader, 1):
+                        self.optimizer.zero_grad()
+
+                        model_input = {
+                            'frames': video.cuda(),
+                            'frame_mask': video_mask.cuda(), 'words': words.cuda(), 'word_mask': word_mask.cuda(),
+                            'label': scores.cuda(), 'label_mask': scores_mask.cuda(), 'gt': label.cuda(),
+                            'node_pos': id2pos.cuda(), 'node_mask': node_mask.cuda(), 'adj_mat': adj_mat.cuda()
+                        }
+
+                        predict_boxes, loss = self.model(**model_input)
+                        loss = torch.mean(loss)
+
+                        meters['loss'].update(loss.item())
+                        video_mask = video_mask.cpu().numpy()
+                        gt_boxes = model_input['gt'].cpu().numpy()
+                        predict_boxes = np.round(predict_boxes.cpu().numpy()).astype(np.int32)
+                        gt_starts, gt_ends = gt_boxes[:, 0], gt_boxes[:, 1]
+                        predict_starts, predict_ends = predict_boxes[:, 0], predict_boxes[:, 1]
+                        predict_starts[predict_starts < 0] = 0
+                        seq_len = np.sum(video_mask, -1)
+                        predict_ends[predict_ends >= seq_len] = seq_len[predict_ends >= seq_len] - 1
+                        IoUs = criteria.calculate_IoU_batch((predict_starts, predict_ends),
+                                                            (gt_starts, gt_ends))
+                        meters['mIoU'].update(np.mean(IoUs), IoUs.shape[0])
+                        for i in range(1, 10, 2):
+                            meters['IoU@0.%d' % i].update(np.mean(IoUs >= (i / 10)), IoUs.shape[0])
                 print('| ', end='')
                 for key, value in meters.items():
                     print('{}, {:.4f}'.format(key, value.avg), end=' | ')

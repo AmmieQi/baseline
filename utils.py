@@ -44,6 +44,8 @@ def generate_anchors(dataset='ActivityNet'):
         widths = np.array([16, 32, 64, 96, 128, 160, 192])
     elif dataset == 'TACOS':
         widths = np.array([6, 18, 32])
+    elif dataset == 'NewDataset':
+        widths = np.array([6, 18, 32])
     else:
         return None
     center = 7.5
