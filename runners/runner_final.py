@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 import criteria
 from dataloaders.clip_loader import get_dataset
 from models_.gcn_final import Model
+from models_.LNet import LNet
 from optimizer.adam_optimizer import AdamOptimizer
 from optimizer.lr_scheduler.inverse_square_root_schedule import InverseSquareRootSchedule
 from utils import load_word2vec, AverageMeter, TimeMeter
@@ -21,8 +22,11 @@ class Runner:
         self.args = args
         self.word2vec = load_word2vec(args.word2vec_path)
         self._build_loader()
+        print('build loader done')
         self._build_model()
+        print('build model done')
         self._build_optimizer()
+        print('build optimizer done')
 
     def _build_loader(self):
         args = self.args
@@ -42,7 +46,10 @@ class Runner:
                                       shuffle=False) if test else None
 
     def _build_model(self):
-        self.model = Model(self.args)
+        if self.args.dataset=='NewDataset':
+            self.model = LNet(self.args)
+        else:
+            self.model = Model(self.args)
         print(self.model)
         device_ids = [0]
         # self.inference = self.model.inference
