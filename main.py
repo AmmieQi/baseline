@@ -13,7 +13,7 @@ def parse_args():
                         help='train the model')
     parser.add_argument('--evaluate', action='store_true',
                         help='evaluate the model on dev set')
-    parser.add_argument('--dataset', choices=['ActivityNet', 'TACOS'], default='ActivityNet',
+    parser.add_argument('--dataset', choices=['ActivityNet', 'TACOS', 'NewDataset'], default='ActivityNet',
                         help='')
     parser.add_argument('--train-data', type=str,
                         default=None,
